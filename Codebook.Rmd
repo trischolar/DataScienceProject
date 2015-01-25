@@ -1,0 +1,136 @@
+---
+title: "Data cleaning project"
+output: html_document
+---
+
+
+#About the data
+More info about the raw data can be found here: http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones 
+
+A few notes on variables from data source (features_info.txt)
+The features selected for this database come from the accelerometer and gyroscope 3-axial raw signals tAcc-XYZ and tGyro-XYZ. These time domain signals (prefix 't' to denote time) were captured at a constant rate of 50 Hz. Then they were filtered using a median filter and a 3rd order low pass Butterworth filter with a corner frequency of 20 Hz to remove noise. Similarly, the acceleration signal was then separated into body and gravity acceleration signals (tBodyAcc-XYZ and tGravityAcc-XYZ) using another low pass Butterworth filter with a corner frequency of 0.3 Hz. 
+
+Subsequently, the body linear acceleration and angular velocity were derived in time to obtain Jerk signals (tBodyAccJerk-XYZ and tBodyGyroJerk-XYZ). Also the magnitude of these three-dimensional signals were calculated using the Euclidean norm (tBodyAccMag, tGravityAccMag, tBodyAccJerkMag, tBodyGyroMag, tBodyGyroJerkMag). 
+
+Finally a Fast Fourier Transform (FFT) was applied to some of these signals producing fBodyAcc-XYZ, fBodyAccJerk-XYZ, fBodyGyro-XYZ, fBodyAccJerkMag, fBodyGyroMag, fBodyGyroJerkMag. (Note the 'f' to indicate frequency domain signals). 
+
+These signals were used to estimate variables of the feature vector for each pattern:  
+'-XYZ' is used to denote 3-axial signals in the X, Y and Z directions.
+
+tBodyAcc-XYZ
+tGravityAcc-XYZ
+tBodyAccJerk-XYZ
+tBodyGyro-XYZ
+tBodyGyroJerk-XYZ
+tBodyAccMag
+tGravityAccMag
+tBodyAccJerkMag
+tBodyGyroMag
+tBodyGyroJerkMag
+fBodyAcc-XYZ
+fBodyAccJerk-XYZ
+fBodyGyro-XYZ
+fBodyAccMag
+fBodyAccJerkMag
+fBodyGyroMag
+fBodyGyroJerkMag
+
+#Steps for acessing and processing data
+
+Downloads and unzips the data file from the source and sets working directory to newly downloaded file
+```{r}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+download.file(fileUrl, destfile = "dataset.zip", method = "curl") 
+unzip ("dataset.zip")
+
+```
+
+
+Reads in the relevant files for test and train and cleans up a few column names
+
+```{r}
+# read in relevant files for test subset
+test<-read.table("UCI HAR Dataset/test/X_test.txt")
+test_activity<-read.table("UCI HAR Dataset/test/y_test.txt")
+test_subject<-read.table("UCI HAR Dataset/test/subject_test.txt")
+#rename columns and create single test dataframe
+names(test_subject)[names(test_subject)=="V1"] <-"Subject"
+names(test_activity)[names(test_activity)=="V1"] <-"Activity"
+alltest<-cbind(test_subject, test_activity, test)
+
+# read in relevant files for train subset
+train<-read.table("./train/X_train.txt")
+train_activity<-read.table("./train/y_train.txt")
+train_subject<-read.table("./train/subject_train.txt")
+
+#rename columns and create single train dataframe
+names(train_subject)[names(train_subject)=="V1"] <-"Subject"
+names(train_activity)[names(train_activity)=="V1"] <-"Activity"
+alltrain<-cbind(train_subject, train_activity, train)
+
+
+```
+
+
+Merges the test and train sets intoa a single data frame
+```{r}
+#merge test and train into single dataset
+data<-rbind(alltest, alltrain)
+```
+
+Now we read in the features and process the text to make it clean for use as column headers, also subsets to only a list of fields referring to mean and standard deviation
+
+```{r}
+#read in features
+features<-read.table("./features.txt")
+
+#subset to only those containing mean or std
+features<-subset(features, grepl("mean", features$V2)|grepl("std", features$V2))
+
+
+#uses subset of feature names to keeps only columns containing mean or std in master dataframe
+keepcol<-features$V1
+keepcolname<-paste("V", keepcol, sep = "")
+keepcolname<-c( "Subject", "Activity", keepcolname)
+data<-data[keepcolname]
+
+#remove special characters from feature names so can be used as column names
+features$V2<-gsub("[[:punct:]]", "", features$V2)
+
+#renames columns with clean feature name
+newcolname<-c( "Subject", "Activity", features$V2)
+colnames(data) <- newcolname
+
+```
+
+Now we recode the Activity variable replacing the number with the human readable activity name
+```{r}
+#recode variable for activity with human readable activity names
+data$Activity[data$Activity == 1] <- "Walking"
+data$Activity[data$Activity == 2] <- "Walking Upstairs"
+data$Activity[data$Activity == 3] <- "Walking Downstairs"
+data$Activity[data$Activity == 4] <- "Sitting"
+data$Activity[data$Activity == 5] <- "Standing"
+data$Activity[data$Activity == 6] <- "Laying"
+
+```
+
+Next we create a separate dataframe that has the average of each variable for each activity and each subject using the aggregate function
+
+
+```{r}
+aggdata <-aggregate(data, by=list(data$Subject, data$Activity),  FUN=mean, na.rm=TRUE)
+
+#cleans up the columns and column names, removing uneeded columns created by the aggregate function
+aggdata<-subset(aggdata, select = -c(Group.1,Activity) )
+names(aggdata)[names(aggdata)=="Group.2"] <-"Activity"
+```
+
+Output the results in to a txt file
+
+```{r}
+write.table(aggdata, "tidy summary.txt",row.name=FALSE) 
+
+```
+
+
