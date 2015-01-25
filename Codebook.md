@@ -8,12 +8,12 @@ More info about the raw data can be found here: http://archive.ics.uci.edu/ml/da
 #Subject is the subject number pulled from the test and train set, values range 1-30
 
 #Activity is a human readable form of the orginal activity labels recoded for convenience
--1 WALKING
--2 WALKING_UPSTAIRS
--3 WALKING_DOWNSTAIRS
--4 SITTING
--5 STANDING
--6 LAYING
+- 1 WALKING
+- 2 WALKING_UPSTAIRS
+- 3 WALKING_DOWNSTAIRS
+- 4 SITTING
+- 5 STANDING
+- 6 LAYING
 
 
 
